@@ -308,6 +308,7 @@ Access http://localhost:8000
 
 Login with:
 
-Admin: admin@example.com / password
+Admin: superadmin@gmail.com
+Password : superadmin
 
 Navigate dashboard sections using sidebar.
