@@ -10,7 +10,9 @@ A Laravel 11 application to manage daily meal accounts, costs, member balances, 
 * Market Cost Recording
 * Cooking Payment Management
 * Monthly Summary Reports
-* Multi-lingual (Localization)
+* Localization (Multi-language Support)
+* Responsive UI with Tailwind CSS
+* Admin/User Role Switching
 
 ## Tech Stack
 
@@ -19,6 +21,7 @@ A Laravel 11 application to manage daily meal accounts, costs, member balances, 
 * **Roles & Permissions**: [Spatie Laravel-Permission v6](https://spatie.be/docs/laravel-permission/v6/)
 * **Database**: MySQL
 * **Front-end**: Blade + Tailwind CSS
+* **Version Control**: Git + GitHub
 
 ## Prerequisites
 
@@ -33,8 +36,8 @@ A Laravel 11 application to manage daily meal accounts, costs, member balances, 
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/meal-account-management.git
-   cd meal-account-management
+   git clone https://github.com/Arefin201/meal-management_dev.git
+   cd meal-management_dev
    ```
 
 2. **Install PHP dependencies**
@@ -72,8 +75,7 @@ A Laravel 11 application to manage daily meal accounts, costs, member balances, 
 5. **Run Migrations & Seeders**
 
    ```bash
-   php artisan migrate
-   php artisan db:seed
+   php artisan migrate --seed
    ```
 
 6. **Link Storage (if used)**
@@ -82,13 +84,34 @@ A Laravel 11 application to manage daily meal accounts, costs, member balances, 
    php artisan storage:link
    ```
 
+
+
+
+
+Usage
+Access http://localhost:8000
+
+Login with:
+Admin: superadmin@gmail.com
+Password : superadmin
+
+Navigate dashboard sections using sidebar.
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Roles & Permissions
 
-This application uses Spatie's Laravel-Permission package. To learn more about managing roles and permissions, see the official docs:
-
-> [https://spatie.be/docs/laravel-permission/v6/](https://spatie.be/docs/laravel-permission/v6/)
-
-You can create roles and assign permissions via tinker or seeders:
+This application uses Spatie's Laravel-Permission package. To manage roles and permissions:
 
 ```bash
 php artisan tinker
@@ -115,6 +138,53 @@ To switch the application locale (e.g., `en`, `bn`):
    ```bash
    php artisan vendor:publish --tag=laravel-lang
    ```
+
+## Running the App Locally
+
+Start the development server:
+
+```bash
+php artisan serve
+```
+
+Visit `http://127.0.0.1:8000` in your browser.
+
+## Deployment (Free Hosting)
+
+To deploy this project on a free hosting service like [Render](https://render.com):
+
+1. Push your code to GitHub (public repo).
+2. Sign up/log in to [Render.com](https://render.com).
+3. Click **New Web Service** → Connect your GitHub repo.
+4. Configure the settings:
+
+   * **Build Command**: `composer install && npm install && npm run build && php artisan migrate --force`
+   * **Start Command**: `php artisan serve --host=0.0.0.0 --port=10000`
+   * **Environment Variables**: Set values for DB\_HOST, DB\_DATABASE, DB\_USERNAME, etc.
+5. Choose a free plan and deploy.
+
+## Contributing
+
+1. Fork this repository
+2. Create your feature branch (`git checkout -b feature/YourFeature`)
+3. Commit your changes (`git commit -m 'Add some feature'`)
+4. Push to the branch (`git push origin feature/YourFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is open-sourced under the MIT license.
+
+---
+
+**Demo**: [https://meal-management-demo.render.com](#) (replace with live link if deployed)
+
+**Author**: Arefin201 — [GitHub Profile](https://github.com/Arefin201)
+
+---
+
+Happy coding!
+
 
 ## Running the App Locally
 
