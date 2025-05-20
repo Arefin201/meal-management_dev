@@ -182,3 +182,62 @@ This project is open-sourced under the MIT license.
    ```bash
    git clone https://github.com/yourusername/meal-management.git
    cd meal-management
+Install Dependencies
+
+bash
+composer install
+npm install && npm run build
+Configure Environment
+
+bash
+cp .env.example .env
+# Update DB credentials in .env
+Database Setup
+
+bash
+php artisan migrate --seed
+Generate Key
+
+bash
+php artisan key:generate
+Run Server
+
+bash
+php artisan serve
+Role Configuration (Using Spatie)
+Create Roles
+
+php
+// In seeder or tinker
+Role::create(['name' => 'Admin']);
+Role::create(['name' => 'Accountant']);
+Assign Permissions
+
+php
+$adminRole = Role::findByName('Admin');
+$adminRole->givePermissionTo(['manage-users', 'edit-expenses']);
+Assign Roles via UI
+
+Navigate to Role & Permission dashboard section.
+
+Database Structure
+Key tables:
+
+users: Member profiles
+
+expenses: Market purchases
+
+roles: User roles
+
+permissions: System capabilities
+
+role_has_permissions: Permission assignments
+
+Usage
+Access http://localhost:8000
+
+Login with:
+
+Admin: admin@example.com / password
+
+Navigate dashboard sections using sidebar.
