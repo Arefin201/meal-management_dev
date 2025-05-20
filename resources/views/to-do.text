@@ -1,0 +1,643 @@
+1.Install Laravel
+    composer create-project laravel/laravel:^11.0 myproject
+2.Install Breeze
+    composer require laravel/breeze --dev
+    php artisan breeze:install
+    php artisan migrate (set your mysql)
+            DB_CONNECTION=mysql
+            DB_HOST=127.0.0.1
+            DB_PORT=3306
+            DB_DATABASE=myproject_db
+            DB_USERNAME=root
+            DB_PASSWORD=
+            DB_CHARSET=utf8mb4
+            DB_COLLATION=utf8mb4_unicode_ci
+
+            SESSION_DRIVER=cookie
+            SESSION_LIFETIME=120
+    npm install
+npm run dev
+php artisan serve
+3.Install Laravel-permission (https://spatie.be/docs/laravel-permission/v6/installation-laravel)
+    https://spatie.be/docs/laravel-permission/v6/basic-usage/ (Follow This Documantiation)
+    composer require spatie/laravel-permission
+    php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvider"
+    php artisan optimize:clear
+    php artisan migrate
+4.Add User model Class:
+    use Spatie\Permission\Traits\HasRoles;
+    use HasRoles;
+5. create Seeder PermissionSeeder
+    php artisan make:seeder PermissionSeeder
+    set all role route permission from user's this project 
+    public function run(){
+        $permissions = [
+        'user-menu','user-list','user-creat','user-edit','user-delite',
+        'role-menu','role-list','role-creat','role-edit','role-delite',
+        'product-menu','product-list','product-creat','product-edit','product-delite',
+        ];
+        foreach ($permissions as $permission) {
+        Permission::create(['name' => $permission]);
+        }
+    }
+6. create UserSeeder
+    php artisan make:seeder UserSeeder
+    use App\model\user
+    use spatie\permission\model\permission & Role Model import
+    public function run(){
+        $superAdmin = User::create([
+        "name" => "Super Admin",
+        "email" => "superadmin@dema.gmail.com",
+        "password" => Hash::make("password"),
+        ]);
+        $admin = User::create([
+        "name" => "Admin",
+        "email" => "admin@dema.gmail.com",
+        "password" => Hash::make("password"),
+        ]);
+        $role = Role::create([
+        "name" => "admin",
+        ]);
+        $permition = Permission::pluck('id')->all();
+        $role->syncPermissions($permition);
+        $superAdmin->assignRole($role);
+        $admin->syncRoles($role);
+    }
+7. Database Seeder
+    public function run(): void{
+    User::factory(10)->create();
+        User::factory()->create([
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        ]);
+        $this->call([
+        PermissionSeeder::class,
+        UserSeeder::class,
+        ]);
+    }
+php artisan migrate:fresh --seed
+9.Fontend or Blade File DesignImplemint
+10. php artisan make:controller UserController --resource
+    Add this function And Route=>
+    public function logout(Request $request){
+    Auth::guard('web')->logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect('/');
+    }
+    Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('logout', [UserController::class,'logout'])->name('logout');
+    });
+11. Role Manage User controller
+    php artisan make:controller RoleController --resource
+    php artisan make:model Role
+     index. public function index(){
+        $roles = Role::latest()->with('Permissions')->get();
+        return view('test.pages.roles.index', compact('roles'));
+     }
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+    @foreach ($roles as $key => $role)
+        tr>
+        <td>{{ $key + 1 }}</td>
+        <td>{{ $role->name }}</td>
+        <td>
+            @foreach ($role->Permissions as $permission)
+                <span class="badge bg-danger">{{ $permission->name }}</span>
+            @endforeach
+        </td>
+        <td class="d-flex gap-2">
+            <a href="{{ route('roles.edit', $role->id) }}" class="btn btn-primary btn-small">edit</a>
+            <button type="submit" class="btn btn-danger btn-small">delete</button>
+        </td>
+        </tr>
+    @endforeach
+    creat & store
+        Route::get('/roles/create', [RoleController::class, 'create'])->name('roles.create');
+        public function create(){
+            $permissions = Permission::get();
+            return view('test.pages.roles.creat', compact('permissions'));
+        }
+        public function store(Request $request){
+            $request->validate([
+            'name' => 'required|unique:roles,name',
+            'permission' => 'required',
+            ]);
+            $permissionId = array_map('intval', $request->input('permission'));
+            $role = Role::create(['name' => $request->input('name')]);
+            $role->syncPermissions($permissionId);
+        return redirect()->route('roles.index');
+        }
+        Route::get('/roles/create', [RoleController::class, 'create'])->name('roles.create');
+        Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
+        <form action="{{ route('roles.store') }}" method="post">
+            @csrf
+            <div class="form-group mb-3">
+                <label for="name" class="col-sm-3 col-form-label">Role Name</label>
+                <div class="col-sm-9">
+                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name"
+                        value="" placeholder="Enter Your Role Name">
+                    @error('name')
+                        <div class="alert text-danger">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
+            <div class="form-group mb-3">
+                <div class="col-sm-9 form-check">
+                    @foreach ($permissions as $permission)
+                        <label class="form-check-label">
+                            <input type="checkbox" name="permission[{{ $permission->id }}]" value="{{ $permission->id }}"
+                                class="form-check-input @error('permission') is-invalid @enderror">
+                            {{ $permission->name }}
+                        </label>
+                        <br />
+                    @endforeach
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-sm-3 col-form-label"></label>
+                <div class="col-sm-9">
+                    <div class="d-md-flex d-grid align-items-center gap-3">
+                        <button type="submit" class="btn btn-primary px-4">Save</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+    edit & Update
+        public function edit(string $id){
+            $permissoes = Permission::all();
+            $role = Role::with('permissions')->find($id);
+            $rolePermissoes = $role->permissions->pluck('id')->all();
+            return view('test.pages.roles.edit', compact('role', 'permissoes', 'rolePermissoes'));
+        }
+        (index paage a )<a href="{{ route('roles.edit', $role->id) }}" class="btn btn-primary btn-small">edit</a>
+        Route::get('/roles/{id}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+        Route::put( '/roles/{id}', [RoleController::class, 'update'])->name('roles.update');
+        public function update(Request $request, string $id){
+            $request->validate([
+            'name' => 'required|unique:roles,name,'.$id,
+            'permission' => 'required',
+            ]);
+            $role = Role::find($id);
+            $role->name = $request->input('name');
+            $role->save();
+
+            $permissionId = array_map('intval', $request->input('permission'));
+            $role->syncPermissions($permissionId);
+            return redirect()->route('roles.index');
+        }
+
+        <form action="{{ route('roles.update', $role->id) }}" method="post">
+            @csrf
+            @method('PUT')
+            <div class="form-group mb-3">
+                <label for="name" class="col-sm-3 col-form-label">Role Name</label>
+                <div class="col-sm-9">
+                    <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name"
+                        value="{{ $role->name }}" placeholder="Enter Your Role Name">
+                    @error('name')
+                        <div class="alert text-danger">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
+            <div class="form-group mb-3">
+                <div class="col-sm-9 form-check">
+                    @foreach ($permissoes as $permission)
+                        <label class="form-check-label">
+                            <input type="checkbox" name="permission[{{ $permission->id }}]" value="{{ $permission->id }}"
+                                class="form-check-input @error('permission') is-invalid @enderror"
+                                {{ in_array($permission->id, $rolePermissoes) ? 'checked' : '' }}>
+                            {{ $permission->name }}
+                        </label>
+                        <br />
+                    @endforeach
+                </div>
+            </div>
+            <div class="row">
+                <label class="col-sm-3 col-form-label"></label>
+                <div class="col-sm-9">
+                    <div class="d-md-flex d-grid align-items-center gap-3">
+                        <button type="submit" class="btn btn-primary px-4">Save</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+    delete Role User
+        public function destroy(string $id){
+            $role = Role::find($id)->delete();
+            return redirect()->back();
+        }
+        Route::delete( '/roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        (index pafe a) <form action="{{ route('roles.destroy', $role->id) }}" method="POST"
+            onsubmit="return confirm('Are you sure you want to delete this role?');">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-danger btn-small">Delete</button>
+        </form>
+
+12. User Manage
+    php artisan make:controller UserController
+     Route::get('/users', [UserController::class,'index'])->name('users.index');
+    public function index(){
+        $users = User::with('roles')->get();
+        return view("test.pages.users.index",compact('users') );
+    }
+     user->index page   @foreach ($users as $key => $user)
+                                        <tr>
+                                            <td>{{ $key + 1 }}</td>
+                                            <td>{{ $user->name }}</td>
+                                            <td>
+                                                @foreach ($user->roles as $role)
+                                                <span class="badge bg-danger">{{$role->name}}</span>
+                                                @endforeach
+                                            </td>
+                                            <td>{{$user->email}}</td>
+                                            <td class="d-flex gap-2">
+                                                <a href="user-edit.html" class="btn btn-primary btn-small">edit</a>
+                                                <button type="submit" class="btn btn-danger btn-small">delete</button>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+
+    creat & store User
+        public function create(){
+            $roles = Role::latest()->get();
+            return view("test.pages.users.creat", compact('roles'));
+        }
+        public function store(Request $request){
+            $request->validate([
+                'name'=> 'required',
+                'email' => 'required|string|email|max:255|unique:users,email|lowercase',
+                'password'=> 'required|same:confirm_password',
+                'roles'=> 'required',
+            ]);
+            $user = User::create([
+                'name'=> $request->name,
+                'email'=> $request->email,
+                'password'=> Hash::make($request->password),
+            ]);
+            $user->assignRole($request->roles);
+            return redirect()->route('users.index');
+        }
+                <form action="{{route('users.store')}}" method="post">
+                                @csrf
+                                <div class="row mb-3">
+                                    <label for="name" class="col-sm-3 col-form-label">Name</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name"
+                                            value="{{old('name')}}" placeholder="Enter Your Name">
+                                    </div>
+
+                                </div>
+                                <div class="row mb-3">
+                                    <label for="email" class="col-sm-3 col-form-label">Email</label>
+                                    <div class="col-sm-9">
+                                        <input type="email" class="form-control  @error('email') is-invalid @enderror" id="email" name="email"
+                                            value="{{old('email')}}" placeholder="Enter your email">
+                                    </div>
+
+                                </div>
+                                <div class="row mb-3">
+                                    <label for="password" class="col-sm-3 col-form-label">Password</label>
+                                    <div class="col-sm-9">
+                                        <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password"
+                                            value="{{old('password')}}" placeholder="Enter your password">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <label for="password" class="col-sm-3 col-form-label">Confirm Password</label>
+                                    <div class="col-sm-9">
+                                        <input type="password" class="form-control " id="confirm_password"
+                                            name="confirm_password" value="" placeholder="Enter confirm password">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <label for="role" class="col-sm-3 col-form-label">Select Role</label>
+                                    <div class="col-sm-9">
+                                        <select class="form-select" multiple name="roles[]">
+                                            <option selected="" disabled>Select Roles</option>
+
+                                            @foreach ($roles as $role)
+                                                <option value="{{ $role->name }}">{{ $role->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <label class="col-sm-3 col-form-label"></label>
+                                    <div class="col-sm-9">
+                                        <div class="d-md-flex d-grid align-items-center gap-3">
+                                            <button type="submit" class="btn btn-primary px-4">Save</button>
+                                            <button type="reset" class="btn btn-light px-4">Reset</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+
+        Route::get('/users/create', [UserController::class,'create'])->name('users.create');
+        Route::post('/users', [UserController::class,'store'])->name('users.store');
+
+    Edit & Update
+        Index page a <a href="{{ route('users.edit', $user->id) }}"class="btn btn-primary btn-small">edit</a>
+        Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put( '/users/{id}', [UserController::class, 'update'])->name('users.update');
+
+        * Show the form for editing the specified resource.
+        */
+        public function edit(string $id)
+        {
+            $user = User::findOrFail($id);
+            $roles = Role::latest()->get();
+            $userRoles = $user->roles->pluck('name', 'id')->all();
+
+            return view('test.pages.users.edit', compact('user', 'roles', 'userRoles'));
+        }
+        /**
+        * Update the specified resource in storage.
+        */
+        public function update(Request $request, string $id)
+        {
+            // Validate the request data
+            $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'email' => 'sometimes|email|unique:users,email,' . $id,
+                'password' => 'nullable|min:6',
+                'roles' => 'required',
+            ]);
+
+            // Find the user or fail
+            $user = User::findOrFail($id);
+
+            // Update fields if they exist in the request
+            $updateData = [];
+
+            if ($request->has('name')) {
+                $updateData['name'] = $request->name;
+            }
+
+            if ($request->has('email')) {
+                $updateData['email'] = $request->email;
+            }
+
+            if ($request->has('password')) {
+                $updateData['password'] = Hash::make($request->password);
+            }
+
+            // Perform the update
+            if (!empty($updateData)) {
+                $user->update($updateData);
+            }
+
+            // Sync roles
+            $user->syncRoles($request->roles);
+
+            // Redirect with success message
+            return redirect()
+                ->route('users.index')
+                ->with('success', 'User updated successfully');
+        }
+        <form action="{{ route('users.update', $user->id) }}" method="POST">
+                            @csrf
+                            @method('PUT')
+                            
+                            <div class="row mb-3">
+                                <label for="name" class="col-sm-3 col-form-label">Full Name</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control @error('name') is-invalid @enderror" 
+                                           id="name" name="name" value="{{ old('name', $user->name) }}" 
+                                           placeholder="Enter full name">
+                                    @error('name')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <label for="email" class="col-sm-3 col-form-label">Email Address</label>
+                                <div class="col-sm-9">
+                                    <input type="email" class="form-control @error('email') is-invalid @enderror" 
+                                           id="email" name="email" value="{{ old('email', $user->email) }}" 
+                                           placeholder="Enter email address">
+                                    @error('email')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <label for="password" class="col-sm-3 col-form-label">Password</label>
+                                <div class="col-sm-9">
+                                    <div class="input-group">
+                                        <input type="password" class="form-control @error('password') is-invalid @enderror" 
+                                               id="password" name="password" 
+                                               placeholder="Leave blank to keep current password">
+                                        <button class="btn btn-outline-secondary toggle-password" type="button">
+                                            <i class="bx bx-hide"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">Only fill if you want to change the password</small>
+                                    @error('password')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <label class="col-sm-3 col-form-label">Roles</label>
+                                <div class="col-sm-9">
+                                    <div class="roles-container p-3 bg-light rounded">
+                                        @foreach($roles as $role)
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input @error('roles') is-invalid @enderror" 
+                                                       type="checkbox" name="roles[]" 
+                                                       value="{{ $role->name }}" 
+                                                       id="role_{{ $role->id }}"
+                                                       {{ $user->hasRole($role->name) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="role_{{ $role->id }}">
+                                                    {{ $role->name }}
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                        @error('roles')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <label class="col-sm-3 col-form-label"></label>
+                                <div class="col-sm-9">
+                                    <div class="d-md-flex d-grid align-items-center gap-3">
+                                        <button type="submit" class="btn btn-primary px-4">Update User</button>
+                                        <button type="reset" class="btn btn-light px-4">Reset</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+
+    Delete User.
+    Route::delete( '/users/{id}', [UserController::class, 'destroy'])->name('users.destroy');
+    public function destroy(string $id)
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+        return redirect()->back();
+    }
+    <form action="{{ route('users.destroy', $user->id) }}" method="POST"
+                                                    onsubmit="return confirm('Are you sure you want to delete this role?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger btn-small">Delete</button>
+                                                </form>
+
+13. Product Section (Basic CRUD operation)
+    php artisan make:model Product -mc (normal Products)
+    php artisan make:controller ProductController --resource
+    public function index(){
+        $products = Product::latest()->get();
+        return view("test.pages.product.index", compact("products"));
+    }
+    public function create(){
+        return view("test.pages.product.creat");
+    }
+    public function store(Request $request){
+        $request->validate([
+            "name" => "required",
+            "price" => 'required',
+            "quantity" => "required",
+            "description" => "required",
+        ]);
+        $product = Product::create([
+            'name' => $request->input('name'),
+            'price' => $request->input('price'),
+            'quantity' => $request->input('quantity'),
+            'description' => $request->input('description'),
+        ]);
+        return redirect()->route('products.index')->with('success', 'Product created Success!');
+    }
+    public function show(string $id){
+        //
+    }
+    public function edit(string $id){
+        $product = Product::find($id);
+        return view('test.pages.product.edit', compact('product'));
+    }
+    public function update(Request $request, string $id) {
+         $request->validate([
+            "name" => "required",
+            "price" => 'required',
+            "quantity" => "required",
+            "description" => "required",
+        ]);
+        $product = Product::find($id);
+        $product->update($request->all());
+        return redirect()->route("products.index")->with("success","Products Edit Success !");
+    }
+    public function destroy(string $id){
+        $product = Product::find($id);
+        $product->delete();
+        return redirect()->back()->with('success', 'Product Delete Success !');
+    }
+    // Product all Routs
+        Route::get( '/products', [ProductController::class,'index'])->name('products.index');
+        // Create & Store
+        Route::get( '/products/create', [ProductController::class,'create'])->name('products.create');
+        Route::post( '/products', [ProductController::class,'store'])->name('products.store');
+        // Edit & Update
+        Route::get( '/products/{id}/edit', [ProductController::class,'edit'])->name('products.edit');
+        Route::put( '/products/{id}', [ProductController::class,'update'])->name('products.update');
+        // Delete
+        Route::delete( '/products/{id}', [ProductController::class,'destroy'])->name('products.destroy');
+
+14. User Manage 
+    Reginter Middleware 
+        Laravel 11 open /bootstrap/app.php and register them there:
+        ->withMiddleware(function (Middleware $middleware) {
+            $middleware->alias([
+                'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+                'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+                'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            ]);
+        })
+    Route Set Role Permission
+        Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:role-manu|role-list')->name('roles.index');
+
+        Route::get('/roles/create', [RoleController::class, 'create'])->middleware('permission:role-create')->name('roles.create');
+        Route::post( '/roles', [RoleController::class, 'store'])->middleware('permission:role-create')->name('roles.store');
+
+        Route::get('/roles/{id}/edit', [RoleController::class, 'edit'])->middleware('permission:role-edit')->name('roles.edit');
+        Route::put( '/roles/{id}', [RoleController::class, 'update'])->middleware('permission:role-editt')->name('roles.update');
+
+        Route::delete( '/roles/{id}', [RoleController::class, 'destroy'])->middleware('permission:role-delete')->name('roles.destroy');
+
+    @can('edit articles')
+    //
+    @endcan
+
+ @can('user-list')
+                    <div class="ms-auto">
+                        <div class="btn-group">
+                            <a href="{{ route('users.create') }}" class="btn btn-primary">Create User</a>
+                        </div>
+                    </div>
+                @endcan
+            </div>
+            <!--end breadcrumb-->
+            <h6 class="mb-0 text-uppercase">DataTable Example</h6>
+            <hr>
+            @can('user-menu')
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <div id="example_wrapper" class="dataTables_wrapper dt-bootstrap5">
+                                <table id="myTable" class="display table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Name</th>
+                                            <th>Roles</th>
+                                            <th>Email</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+
+                                        @foreach ($users as $key => $user)
+                                            <tr>
+                                                <td>{{ $key + 1 }}</td>
+                                                <td>{{ $user->name }}</td>
+                                                <td>
+                                                    @foreach ($user->roles as $role)
+                                                        <span class="badge bg-danger">{{ $role->name }}</span>
+                                                    @endforeach
+                                                </td>
+                                                <td>{{ $user->email }}</td>
+                                                <td class="d-flex gap-2">
+                                                    @can('user-edit')
+                                                        <a href="{{ route('users.edit', $user->id) }}"
+                                                            class="btn btn-primary btn-small">edit</a>
+                                                    @endcan
+                                                    @can('user-delite')
+                                                        <form action="{{ route('users.destroy', $user->id) }}" method="POST"
+                                                            onsubmit="return confirm('Are you sure you want to delete this role?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-danger btn-small">Delete</button>
+                                                        </form>
+                                                    @endcan
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endcan
